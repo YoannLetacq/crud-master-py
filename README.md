@@ -1,7 +1,7 @@
 # crud-master
 
 Check more information about this project
-[here](https://github.com/01-edu/public/blob/master/subjects/devops/crud-master/README.md).
+[here](https://github.com/01-edu/public/blob/master/subjects/devops/crud-master-py/README.md).
 
 ## Setup
 
