@@ -1,0 +1,34 @@
+name: 🖤 GA-Misc - Black Check
+
+on:
+  pull_request:
+    paths-ignore:
+      - ".github/**"
+    types: [opened, reopened, synchronize]
+
+jobs:
+  GA-Misc-Check-Black:
+    name: 🖤 Run Black
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🐧 Check out repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Get all changed Python files
+        id: changed-file-list
+        run: |
+          echo "changed_files=$(git diff --name-only --diff-filter=ACMRT --merge-base origin/master | grep -E '\.py$' | xargs)" >> $GITHUB_OUTPUT
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 🧙‍♂️ Run Black format checks
+        if: steps.changed-file-list.outputs.changed_files != ''
+        run: |
+          pip install black
+          black --check --diff ${{ steps.changed-file-list.outputs.changed_files }}
