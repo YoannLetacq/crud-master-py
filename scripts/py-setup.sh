@@ -3,14 +3,14 @@ set -euo pipefail
 echo "Starting environment setup..."
 
 # Update packages
-apt update -y
+# # apt update -y remove for safety on vagrant remove for safety on vagrant
 apt install -y software-properties-common curl
 
 # Add deadsnakes PPA if missing
 if ! grep -Rq "deadsnakes" /etc/apt/sources.list.d/; then
     echo "Adding deadsnakes PPA..."
     add-apt-repository -y ppa:deadsnakes/ppa
-    apt update -y
+    # apt update -y remove for safety on vagrant
 else
     echo "Deadsnakes PPA already present."
 fi

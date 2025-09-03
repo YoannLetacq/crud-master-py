@@ -10,7 +10,7 @@ if command -v rabbitmqctl >/dev/null 2>&1; then
     echo "RabbitMQ is already present : $(rabbitmqctl status | grep RabbitMQ | head -1 || true)"
 else
     echo "Installing RabbitMQ..."
-    apt update -y 
+    # apt update -y remove for safety in vagrant 
     apt install -y rabbitmq-server
     echo "RabbitMQ installed."
 fi 
