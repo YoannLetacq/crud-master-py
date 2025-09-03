@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-set -a 
-source .env
-set +a
+# set -a 
+# source .env
+# set +a
 echo "Starting rabbitMQ installation and setup..."
 
 # Install Rabbitmq if missing 
