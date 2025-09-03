@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
-set -a 
-source .env
-set +a
+# set -a 
+# source .env
+# set +a
 
 echo "Starting postgreSQL installation and set up..."
 
 # update packages
-apt update -y 
+# apt update -y remove for safety on vagrant  
 
 # install PostgreSQL
 if psql --version >/dev/null 2>&1; then 
@@ -77,18 +77,24 @@ else
 fi
 
 # Setup the database and user
-sudo -u postgres psql -d postgres <<EOF
-DO
-\$body\$
-BEGIN
-   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DB_USER}') THEN
-      CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';
-   END IF;
-   IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${DB_NAME}') THEN
-      CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};
-   END IF;
-END
-\$body\$;
-EOF
 
-echo "Database and user setup complete!"
+sudo -u postgres bash -c "cd /tmp && psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'\" | grep -q 1 || psql -c \"CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';\""
+
+#Cretae Database if not exist
+sudo -u postgres bash -c "cd /tmp && psql -tc \"SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'\" | grep -q 1 || psql -c \"CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};\""
+
+# grant all privilege to user on Database
+sudo -u postgres bash -c "cd /tmp && psql -d ${DB_NAME} -c \"GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};\""
+
+# Grant privilege on public schema
+sudo -u postgres bash -c "cd /tmp && psql -d ${DB_NAME} -c \"GRANT ALL ON SCHEMA public TO ${DB_USER};\""
+
+# Grant privilege on all existing object
+sudo -u postgres bash -c "cd /tmp && psql -d ${DB_NAME} -c \"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${DB_USER};\""
+sudo -u postgres bash -c "cd /tmp && psql -d ${DB_NAME} -c \"GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ${DB_USER};\""
+
+# Ensure future object get the right permissions
+sudo -u postgres bash -c "cd /tmp && psql -d ${DB_NAME} -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${DB_USER};\""
+sudo -u postgres bash -c "cd /tmp && psql -d ${DB_NAME} -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${DB_USER};\""
+
+echo "Database and user setup complete."
