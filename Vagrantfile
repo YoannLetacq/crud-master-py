@@ -1,8 +1,21 @@
 require 'yaml'
+require 'dotenv'
+
+Dotenv.load("#{__dir__}/.env")
+
 box = "generic/ubuntu2204"
 
+required_plugins = ["vagrant-reload", "dotenv"]
+required_plugins.each do |plugin|
+  unless Vagrant.has_plugin?(plugin)
+    puts "The following plugin '#{plugin}' is required. Install it with :"
+    puts "vagrant plugin install #{plugin}."
+    exit 1
+  end
+end
+
 current_dir    = File.dirname(File.expand_path(__FILE__))
-configs        = YAML.load_file("#{current_dir}/config.yaml")
+configs        = YAML.safe_load(File.read("#{current_dir}/config.yaml"), aliases: true)
 vagrant_config = configs['configs'][configs['configs']['use']]
 
 billing_vm_addr = vagrant_config['billing_vm_addr']
@@ -34,9 +47,6 @@ inventory_app_path = vagrant_config['inventory_app_path']
 apigateway_app_path = vagrant_config['apigateway_app_path']
 
 Vagrant.configure("2") do |config|
-  if Vagrant.has_plugin?("vagrant-dotenv")
-    config.env.enabled = true
-  end
   config.vm.box = box
   config.ssh.forward_agent = true
 
@@ -60,6 +70,8 @@ Vagrant.configure("2") do |config|
   BILLING_APP_PORT = ENV['BILLING_APP_PORT']
 
   config.vm.define billing_vm do |billing_vm|
+    # allow more to installation process
+    billing_vm.vm.boot_timeout = 850
     billing_vm.vm.hostname = billing_vm_hostname
     billing_vm.vm.network "private_network", ip: billing_vm_addr, hostname: true
     billing_vm.vm.provider "virtualbox" do |vb|
@@ -67,12 +79,16 @@ Vagrant.configure("2") do |config|
       vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       vb.memory = billing_vm_memory
       vb.cpus = billing_vm_cpu
-      vb.name = billing_vm_hostname
+      vb.name = "Play with containers"
     end
 
     # sync billing app
     billing_vm.vm.synced_folder billing_app_src, billing_app_path,
       type: 'virtualbox'
+    
+    # apt now doesnt block on confimation
+    config.vm.provision "shell", inline: "export DEBIAN_FRONTEND=noninteractive"
+
 
     # setup postgresql
     billing_vm.vm.provision "shell",
@@ -82,6 +98,11 @@ Vagrant.configure("2") do |config|
            "DB_PASSWORD" => BILLING_DB_PASSWORD,
            "DB_NAME" => BILLING_DB_NAME,
       }
+
+    # control reboot to help vagrant to maintains ssh connexion
+    if Vagrant.has_plugin?("vagrant-reload")
+      billing_vm.vm.provision "reload", type: "reload"
+    end
 
     # setup rabbitmq
     billing_vm.vm.provision "shell",
